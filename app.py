@@ -1,9 +1,10 @@
-
 from flask import Flask, render_template, request
 import openai
 import os
+from googleapiclient.discovery import build
 
 openai.api_key = os.getenv("OPENAI_API_KEY")
+youtube_api_key = os.getenv("YOUTUBE_API_KEY")
 
 app = Flask(__name__)
 
@@ -29,13 +30,37 @@ def generate_search_query(skill, section_title):
     return response.choices[0].message.content.strip()
 
 def search_youtube(query):
-    print(f"[MOCK SEARCH] Searching YouTube for: {query}")
-    return [{
-        "title": f"Best YouTube Video for: {query}",
-        "url": f"https://youtube.com/watch?v=dummy_{query.replace(' ', '_')}",
-        "views": 100000,
-        "likes": 5000
-    }]
+    youtube = build("youtube", "v3", developerKey=youtube_api_key)
+    search_response = youtube.search().list(
+        q=query,
+        part="snippet",
+        maxResults=5,
+        type="video"
+    ).execute()
+
+    videos = []
+    for item in search_response.get("items", []):
+        video_id = item["id"]["videoId"]
+        video_title = item["snippet"]["title"]
+
+        stats = youtube.videos().list(
+            part="statistics",
+            id=video_id
+        ).execute()
+        video_stats = stats["items"][0]["statistics"]
+        views = int(video_stats.get("viewCount", 0))
+        likes = int(video_stats.get("likeCount", 0))
+
+        videos.append({
+            "title": video_title,
+            "url": f"https://youtube.com/watch?v={video_id}",
+            "views": views,
+            "likes": likes
+        })
+
+    # Sort by views and likes (engagement)
+    videos.sort(key=lambda x: (x['views'], x['likes']), reverse=True)
+    return videos
 
 def generate_course(skill):
     outline = generate_curriculum(skill)
@@ -43,7 +68,7 @@ def generate_course(skill):
     for section in outline:
         query = generate_search_query(skill, section)
         videos = search_youtube(query)
-        top_video = videos[0]
+        top_video = videos[0] if videos else {"title": "No video found", "url": "#", "views": 0, "likes": 0}
         course.append({
             "section": section,
             "video_title": top_video['title'],
