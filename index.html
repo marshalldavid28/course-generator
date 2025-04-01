@@ -1,0 +1,34 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>Free YouTube Course Generator</title>
+    <style>
+      body { font-family: sans-serif; padding: 2em; max-width: 700px; margin: auto; }
+      h1 { color: #333; }
+      input, button { padding: 0.5em; font-size: 1em; }
+      .course { margin-top: 2em; }
+      .course h3 { margin-bottom: 0.2em; }
+    </style>
+  </head>
+  <body>
+    <h1>Free YouTube Course Generator</h1>
+    <form method="post">
+      <input type="text" name="skill" placeholder="What do you want to learn?" value="{{ skill }}" required>
+      <button type="submit">Generate Course</button>
+    </form>
+
+    {% if course %}
+      <div class="course">
+        <h2>Course: {{ skill }}</h2>
+        {% for item in course %}
+          <div>
+            <h3>{{ loop.index }}. {{ item.section }}</h3>
+            <p><a href="{{ item.video_url }}" target="_blank">{{ item.video_title }}</a></p>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </body>
+</html>
